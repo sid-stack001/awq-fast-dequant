@@ -226,14 +226,3 @@ process restarts.
   capability (5.3) cannot run vLLM or modern PyTorch, making this a
   separate project with its own toolchain (TensorRT/ONNX Runtime) rather
   than an extension of this one.
-
-## Possible next steps
-
-1. Validate against real trained AWQ weights rather than synthetic random
-   tensors; current correctness checks confirm the unpacking formula is
-   exact but have not stressed edge cases such as all-zero or
-   extreme-value weights.
-2. Package as an installable module (`pyproject.toml` with an
-   ahead-of-time CUDA build) rather than JIT-compiled scripts.
-3. Test whether autotuned block sizes transfer across other Ampere-family
-   GPUs.
