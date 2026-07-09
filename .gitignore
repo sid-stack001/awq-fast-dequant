@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+*.egg-info/
+build/
+dist/
+
+*.so
+build.ninja
+*.o
+*.d
+
+profiler_trace.json
+*.ncu-rep
+
+autotune_cache/
+archive
+
+# OS cruft
+.DS_Store
+Thumbs.db

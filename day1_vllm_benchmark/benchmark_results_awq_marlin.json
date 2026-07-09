@@ -1,0 +1,86 @@
+[
+  {
+    "batch_size": 1,
+    "mean_latency_ms": 801.8538254000305,
+    "std_latency_ms": 9.695828839501253,
+    "mean_throughput_tokens_per_sec": 159.64866460486428,
+    "std_throughput_tokens_per_sec": 1.9199681834204125,
+    "raw_latencies_ms": [
+      794.9037640000824,
+      795.3982959998029,
+      794.3951709994508,
+      809.759163000308,
+      814.8127330005082
+    ]
+  },
+  {
+    "batch_size": 2,
+    "mean_latency_ms": 806.8860287999996,
+    "std_latency_ms": 5.311981819311756,
+    "mean_throughput_tokens_per_sec": 317.2800634444132,
+    "std_throughput_tokens_per_sec": 2.0826632501006195,
+    "raw_latencies_ms": [
+      814.2403649999324,
+      803.099368000403,
+      804.3764159992861,
+      802.0219290001478,
+      810.6920660002288
+    ]
+  },
+  {
+    "batch_size": 4,
+    "mean_latency_ms": 826.739296800406,
+    "std_latency_ms": 9.046632061084225,
+    "mean_throughput_tokens_per_sec": 619.3603606077905,
+    "std_throughput_tokens_per_sec": 6.84651170610634,
+    "raw_latencies_ms": [
+      825.8099840004434,
+      834.0084010005739,
+      811.7146650001814,
+      833.341133000431,
+      828.8223010004003
+    ]
+  },
+  {
+    "batch_size": 8,
+    "mean_latency_ms": 873.3971753998048,
+    "std_latency_ms": 4.161847601640247,
+    "mean_throughput_tokens_per_sec": 1172.4546190862754,
+    "std_throughput_tokens_per_sec": 5.572252363349917,
+    "raw_latencies_ms": [
+      871.5903370002707,
+      879.6406350002144,
+      871.1183249997703,
+      869.1944059992238,
+      875.442173999545
+    ]
+  },
+  {
+    "batch_size": 16,
+    "mean_latency_ms": 980.5025347997798,
+    "std_latency_ms": 4.334348924003688,
+    "mean_throughput_tokens_per_sec": 2088.757552081521,
+    "std_throughput_tokens_per_sec": 9.250102740351306,
+    "raw_latencies_ms": [
+      978.1273929993404,
+      984.753370999897,
+      984.0049999993425,
+      974.2987820000053,
+      981.3281280003139
+    ]
+  },
+  {
+    "batch_size": 32,
+    "mean_latency_ms": 1392.1574164000049,
+    "std_latency_ms": 44.927306931771476,
+    "mean_throughput_tokens_per_sec": 2944.5588842457387,
+    "std_throughput_tokens_per_sec": 91.53309214785212,
+    "raw_latencies_ms": [
+      1377.0080029999008,
+      1371.32620400007,
+      1470.7516859998577,
+      1358.0954589997418,
+      1383.605730000454
+    ]
+  }
+]

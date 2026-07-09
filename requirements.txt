@@ -1,0 +1,21 @@
+# Exact, pinned versions used to produce the results in README.md and
+# TROUBLESHOOTING.md. This is separate from pyproject.toml, which declares
+# loose dependencies for the installable package (awq_fast_dequant/) —
+# the kernel code itself isn't version-sensitive. Reproducing the actual
+# benchmark numbers requires this exact combination; see TROUBLESHOOTING.md
+# for why these specific versions were chosen over newer ones.
+
+torch==2.4.0
+vllm==0.6.3.post1
+transformers==4.46.3
+ninja
+
+# torch must be installed with the cu121 index, not the default PyPI index:
+#   pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu121
+# Installing torch via plain `pip install -r requirements.txt` will pull a
+# CPU-only or mismatched-CUDA build. Install torch separately first, THEN
+# run `pip install -r requirements.txt` for the rest.
+
+# Not pip-installable, must be present on the system separately:
+#   - nvcc (CUDA toolkit) — version 12.0+ confirmed working
+#   - A CUDA-capable GPU with a driver supporting CUDA 12.x or newer
