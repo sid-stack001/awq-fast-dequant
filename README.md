@@ -279,40 +279,97 @@ before any kernel code was written.
 
 An isolated benchmark of `ops.awq_gemm` confirmed vLLM's 256-token
 heuristic threshold for switching between GEMM strategies is well-tuned on
-this GPU. A corrected, non-serialized benchmark found GEMM compute accounts
-for roughly 60% of real decode step time, which justified the optimization work.
+this GPU. A naive extrapolation from per-call isolated timing initially
+exceeded the real measured decode step time; this was traced to artificial
+serialization introduced by synchronizing before and after every isolated
+call, which never happens in real pipelined execution. A corrected,
+non-serialized benchmark found GEMM compute accounts for roughly 60% of
+real decode step time, which justified the optimization work below.
 
----
+### Kernel versions
 
-## Limitations (important)
+- **v1 (naive):** one thread per output element. Verified bit-for-bit
+  correct against vLLM's output (max absolute difference: 0.000000), but
+  1.15x slower than vLLM's kernel.
+- **v2 (fewer reads):** the inefficiency in v1 is that 8 threads
+  independently re-read the same packed 32-bit word to extract one 4-bit
+  value each. v2 uses one thread per packed word, reading it once and
+  unpacking all 8 values in an unrolled loop. 1.87x faster than v1 in a
+  controlled, single-variable comparison.
+- **v3 (tunable block size):** exposes `threads_per_block` as a runtime
+  parameter rather than a hardcoded constant, enabling the sweep and
+  autotuning below.
 
-- **The speedup numbers do not generalize.** The benchmark used randomly
-  generated synthetic weights, a single GPU (RTX 3060 Laptop), and three
-  specific layer shapes from one small model. Real trained weights,
-  different quantization distributions, larger matrices, or different
-  hardware could easily flip the result. vLLM's kernel is battle-tested
-  across many more conditions than this project covers.
-- **Synthetic weights are not real weights.** AWQ's optimization relies on
-  the statistical distribution of real trained weights. A kernel that
-  performs well on `torch.randint` inputs may behave differently on actual
-  quantized model weights.
-- **This is a learning project, not a production optimization.** The point
-  was to understand how the pieces fit together — quantization formats,
-  CUDA thread hierarchies, GPU cache behavior, profiling tools — not to
-  ship a faster kernel. Writing something that is correct, measurable, and
-  explainable was the goal.
-- **Autotuner is a fast heuristic.** The autotune sweep is lighter than
-  `block_sweep.py` (no randomized ordering, fewer runs). It occasionally
-  disagrees with the full benchmark by ~1%, within expected noise.
-- **Cache is per-machine.** Block size optima are hardware-specific and
-  have not been validated on a second GPU.
+### Stress testing
 
----
+An early single-run comparison suggested a uniform 1.74x speedup over
+vLLM. A more rigorous re-test, using 5+ independent random seeds, three
+real layer shapes, and randomized call order on every timed run to rule
+out positional bias, found the result did not hold uniformly. It was
+strong and reproducible on the two MLP shapes and statistically
+indistinguishable from vLLM on the smaller attention shape, where
+kernel-launch overhead dominates over the memory-access optimization. A
+subsequent run surfaced an outlier-contaminated mean on one shape (std
+exceeding the mean); this was addressed by tracking median alongside mean
+and flagging greater than 15% divergence between them.
 
-## Possible next steps
+Final result, 15 trials times 10 randomized-order runs per shape,
+correctness-checked every trial:
 
-1. Validate against real trained AWQ weights; current checks confirm the
-   unpacking formula is exact but have not stressed edge cases (all-zero
-   weights, extreme values).
-2. Package with an ahead-of-time CUDA build rather than JIT-compiled scripts.
-3. Test whether autotuned block sizes transfer across other Ampere-family GPUs.
+| Shape | v2 vs vLLM | v3 (128 threads) vs vLLM |
+|---|---|---|
+| Attention (1536->1536) | 1.01x (not significant) | 1.15-1.17x |
+| MLP up/gate (1536->8960) | 1.20-1.23x | 1.38-1.47x |
+| MLP down (8960->1536) | 1.13-1.14x | 1.32-1.35x |
+
+v3 at 64 threads per block was the fastest configuration in every shape
+tested, up to 1.47x versus vLLM.
+
+### Hardware validation
+
+Wall-clock results were cross-checked against Nsight Compute performance
+counters (`ncu --section SpeedOfLight`), which also corrected a bottleneck
+misattribution in an earlier draft: vLLM's kernel is not DRAM-bandwidth
+bound (31.51% DRAM utilization) but L1/TEX cache bound (96.26%
+utilization, the actual saturated resource).
+
+| Kernel | L1/TEX Throughput | DRAM Throughput |
+|---|---|---|
+| vLLM (baseline) | 96.26% | 31.51% |
+| v2 | 88.96% | 46.36% |
+| v3 (128 threads) | 84.57% | 56.58% |
+
+The monotonic trend, cache pressure falling and DRAM utilization rising as
+redundant reads are removed and block size shrinks, confirms the
+mechanism rather than only the outcome.
+
+### Autotuning
+
+The best block size varies by shape; 64 threads wins most often but not
+always, so a hardcoded constant does not generalize. `smart_dequantize.py`
+implements shape-keyed autotuning: on first encountering a shape, it runs
+a timing sweep across candidate block sizes and caches the result. Every
+subsequent call for that shape is a cache lookup, measured at 53x faster
+than the first call. The cache persists to
+`autotune_cache/block_size_cache.json` and was confirmed to survive
+process restarts.
+
+## Limitations
+
+- This is a standalone research repository, not a vLLM contribution. The
+  kernel targets one packing format, is tested against synthetic random
+  weights rather than trained model weights, and does not implement
+  `split_k_iters`-style generality for very large matrices. Upstream
+  contribution would require broader shape coverage, real-weight testing,
+  and integration with vLLM's test suite.
+- The autotuner's sweep is deliberately lighter weight than
+  `block_sweep.py` (no randomized ordering, fewer runs). It is a fast
+  production heuristic, not a publishable benchmark, and the two
+  occasionally disagree by about 1%, within expected noise.
+- The autotune cache is per-machine. Block size optima are likely
+  hardware-specific and have not been validated on a second GPU.
+- A three-tier edge/consumer/datacenter comparison, including a Jetson
+  Nano, was considered and deferred. The original Jetson Nano's compute
+  capability (5.3) cannot run vLLM or modern PyTorch, making this a
+  separate project with its own toolchain (TensorRT/ONNX Runtime) rather
+  than an extension of this one.
