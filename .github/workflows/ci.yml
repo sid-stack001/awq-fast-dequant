@@ -1,0 +1,38 @@
+name: CI
+
+# Note: GitHub-hosted runners do not provide GPUs. This workflow verifies
+# that the package installs cleanly and that all CPU-compatible logic is
+# correct. GPU-dependent correctness tests (tests/test_correctness.py) are
+# skipped automatically here (see their skipif markers) and are intended
+# to be run locally on CUDA-capable hardware -- see README.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  install-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CPU-only torch
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Verify package imports
+        run: python -c "import awq_fast_dequant; print(awq_fast_dequant.__version__)"
+
+      - name: Run tests (GPU tests auto-skip on this runner)
+        run: python -m pytest tests/ -v
