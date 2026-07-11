@@ -84,7 +84,7 @@ Same algorithm as v2, but `threads_per_block` is exposed as a runtime
 parameter instead of a hardcoded constant. This enables the autotuning
 sweep below.
 
-### Step 3 — Autotuning: finding the best block size per shape
+### Step 3 Autotuning: finding the best block size per shape
 
 The fastest block size is not the same for every layer, 64 threads wins
 most often but not always. `smart_dequantize.py` (research script) and
